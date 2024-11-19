@@ -10,6 +10,11 @@ public static class AfterReceive
     public static void AddForcedHeaders(Dictionary<string, string>? forcedHeadersProxyDictionary,
         HttpResponseMessage hrm)
     {
+        if (forcedHeadersProxyDictionary == null || hrm.Content == null)
+        {
+            return;
+        }
+
         foreach (var header in forcedHeadersProxyDictionary)
         {
             var headerToRemove =

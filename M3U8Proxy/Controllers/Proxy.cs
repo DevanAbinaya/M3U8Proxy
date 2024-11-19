@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 
 namespace M3U8Proxy.Controllers;
 
-[EnableCors("corsPolicy")]
+[EnableCors("corsPolicy")] // Ensure CORS policy is applied
 [ApiController]
 [Route("[controller]")]
 public partial class Proxy : Controller

@@ -85,8 +85,11 @@ public class Base : Controller
         var stream = _assembly.GetManifestResourceStream(resourceName);
 
         var encryptedStream = new MemoryStream();
-        EncryptStream(stream, encryptedStream, key, 0); // Sequence number is 0.
-        encryptedStream.Position = 0; // Reset position.
+        if (stream != null)
+        {
+            EncryptStream(stream, encryptedStream, key, 0); // Sequence number is 0.
+            encryptedStream.Position = 0; // Reset position.
+        }
         return encryptedStream;
     }
 
