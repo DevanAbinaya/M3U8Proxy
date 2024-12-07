@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 const string myAllowSpecificOrigins = "corsPolicy";
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddOutputCache(options =>
 {
     options.AddPolicy("m3u8", builder =>
@@ -37,12 +38,14 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseMiddleware<CacheControlMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ApiKeyMiddleware>();
 app.UseRouting();
-app.UseCors(myAllowSpecificOrigins); // Ensure CORS middleware is applied
+app.UseCors(myAllowSpecificOrigins);
 app.UseOutputCache();
-app.MapGet("/hello", async context => { await context.Response.WriteAsync("Hello, Bitches! v1.5"); });
+app.MapGet("/hello", async context => { await context.Response.WriteAsync("Hello, Bitches! v1.7"); });
 app.UseAuthentication();
 app.MapControllers();
 app.Run();

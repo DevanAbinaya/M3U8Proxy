@@ -8,7 +8,7 @@ namespace M3U8Proxy.Middleware;
 public class ApiKeyMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly string _apiKey;
+    private readonly string? _apiKey;
     private readonly IHttpClientFactory _httpClientFactory;
     private const string API_KEY_HEADER_NAME = "X-API-Key";
     private const string API_KEY_QUERY_NAME = "api_key";
@@ -37,14 +37,18 @@ public class ApiKeyMiddleware
     public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration, IHttpClientFactory httpClientFactory)
     {
         _next = next;
-        _apiKey = configuration["ApiKey"]!;
+        _apiKey = configuration["ApiKey"];
         _httpClientFactory = httpClientFactory;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Add Cache-Control header for all routes
-        context.Response.Headers.CacheControl = "public, max-age=15768000";
+        // Skip API key validation if no API key is configured
+        if (string.IsNullOrEmpty(_apiKey))
+        {
+            await _next(context);
+            return;
+        }
 
         // Handle both /proxy/ and /proxy/m3u8/ routes
         if (context.Request.Path.StartsWithSegments("/proxy") || context.Request.Path.StartsWithSegments("/proxy/m3u8"))
@@ -157,7 +161,6 @@ public class ApiKeyMiddleware
             return;
         }
 
-        // Rest of the API key validation code remains the same...
         if (context.Request.Headers.TryGetValue(API_KEY_HEADER_NAME, out var headerApiKey) && 
             _apiKey.Equals(headerApiKey))
         {
