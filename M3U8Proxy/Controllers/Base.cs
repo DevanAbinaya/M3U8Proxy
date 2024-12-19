@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Security.Cryptography;
+using System.Web;
 using AspNetCore.Proxy;
 using AspNetCore.Proxy.Options;
 using M3U8Proxy.RequestHandler.AfterReceive;
@@ -132,4 +133,33 @@ public class Base : Controller
         // Copy from input stream to output stream via crypto stream. (The data will be encrypted.)
         inputStream.CopyTo(csEncrypt);
     }
+
+    // [HttpGet]
+    // [Route("key/{**url}")]
+    // public async Task<IActionResult> GetKey(string url)
+    // {
+    //     try
+    //     {
+    //         var decodedUrl = HttpUtility.UrlDecode(url);
+    //         while (decodedUrl.Contains("%"))
+    //         {
+    //             decodedUrl = HttpUtility.UrlDecode(decodedUrl);
+    //         }
+
+    //         using var client = new HttpClient();
+    //         var response = await client.GetAsync(decodedUrl);
+            
+    //         if (!response.IsSuccessStatusCode)
+    //         {
+    //             return StatusCode((int)response.StatusCode);
+    //         }
+
+    //         var keyBytes = await response.Content.ReadAsByteArrayAsync();
+    //         return File(keyBytes, "application/octet-stream");
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         return BadRequest(JsonConvert.SerializeObject(e));
+    //     }
+    // }
 }

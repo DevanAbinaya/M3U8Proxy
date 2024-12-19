@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+﻿FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["M3U8Proxy/M3U8Proxy.csproj", "M3U8Proxy/"]
 RUN dotnet restore "M3U8Proxy/M3U8Proxy.csproj"
@@ -14,11 +14,9 @@ RUN dotnet publish "M3U8Proxy.csproj" \
     -o /app/publish \
     -r linux-arm64 \
     --self-contained true \
-    /p:PublishTrimmed=true \
     /p:PublishSingleFile=true \
     /p:InvariantGlobalization=true \
-    /p:TrimMode=partial \
-    /p:DebuggerSupport=false \
+    /p:PublishTrimmed=false \
     /p:EnableUnsafeBinaryFormatterSerialization=false \
     /p:EnableUnsafeUTF7Encoding=false
 

@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Web;
 
 namespace M3U8Proxy.M3U8Parser;
 
@@ -7,40 +8,42 @@ public partial class M3U8Parser
     [GeneratedRegex(@"\?.+", RegexOptions.Compiled)]
     private static partial Regex GetParamsRegex();
 
+    private static string ExtractUrl(string line)
+    {
+        var match = Regex.Match(line, @"URI=""([^""]+)""");
+        return match.Success ? match.Groups[1].Value : string.Empty;
+    }
 
-    public static string FixAllUrls(string[] lines, string url, string prefix, string suffix, bool encrypted,
-        bool isPlaylist, string baseUrl)
+    private static string MakeAbsolute(string relativeUrl, string baseUrl)
+    {
+        if (Uri.TryCreate(relativeUrl, UriKind.Absolute, out var absoluteUri))
+        {
+            return absoluteUri.ToString();
+        }
+        
+        var baseUri = new Uri(baseUrl);
+        return new Uri(baseUri, relativeUrl).ToString();
+    }
+
+    public static string FixAllUrls(string[] lines, string url, string prefix, string suffix, bool encrypted, bool isPlaylistM3U8, string baseUrl)
     {
         var parameters = GetParamsRegex().Match(url).Value;
         var uri = new Uri(url);
         const string uriPattern = @"URI=""([^""]+)""";
         var isEncodedSegments = ContainsString(lines, "EXT-X-KEY");
-        if (isEncodedSegments != -1 &&false)//disabled for now
+        
+        // Fix key URL if present
+        var keyIndex = ContainsString(lines, "#EXT-X-KEY");
+        if (keyIndex >= 0)
         {
-            var isAes128 = lines[isEncodedSegments].Contains("AES-128");
-            if (isAes128)
+            var keyLine = lines[keyIndex];
+            var keyUrl = ExtractUrl(keyLine);
+            if (!string.IsNullOrEmpty(keyUrl))
             {
-                //change media sequence to be +1
-                var mediaSequenceIndex = ContainsString(lines, "#EXT-X-MEDIA-SEQUENCE");
-                if (mediaSequenceIndex != -1)
-                    lines[mediaSequenceIndex] = Regex.Replace(lines[mediaSequenceIndex],
-                        @"#EXT-X-MEDIA-SEQUENCE:(\d+)",
-                        m => $"#EXT-X-MEDIA-SEQUENCE:{int.Parse(m.Groups[1].Value) + 1}");
-
-                var keyUrl = Regex.Match(lines[isEncodedSegments], @"URI=""([^""]+)""").Groups[1].Value;
-                Console.WriteLine(keyUrl);
-                var key = GetKey(keyUrl).Result;
-                if (key != null)
-                {
-                    var keyString = BitConverter.ToString(key).Replace("-", "").ToLower();
-                    Console.WriteLine(keyString);
-                    lines = InsertIntro(lines, baseUrl, keyString);
-                }
+                // Just make the URL absolute without adding proxy
+                var absoluteKeyUrl = MakeAbsolute(keyUrl, url);
+                lines[keyIndex] = keyLine.Replace(keyUrl, absoluteKeyUrl);
             }
-        }
-        else if (encrypted && !isPlaylist&&isEncodedSegments==-1)
-        {
-            lines = InsertIntro(lines, baseUrl);
         }
 
         for (var i = 0; i < lines.Length; i++)
@@ -50,7 +53,7 @@ public partial class M3U8Parser
             var uriContent = isUri ? Regex.Match(lines[i], uriPattern).Groups[1].Value : lines[i];
             if (!Uri.TryCreate(uriContent, UriKind.RelativeOrAbsolute, out var uriExtracted)) continue;
             var newUri = !uriExtracted.IsAbsoluteUri ? new Uri(uri, uriExtracted) : uriExtracted;
-            var substitutedUri = $"{prefix}{EncodeUrl(newUri + parameters, encrypted && isPlaylist)}{suffix}";
+            var substitutedUri = $"{prefix}{EncodeUrl(newUri + parameters, encrypted)}{suffix}";
             var test = Regex.Replace(lines[i], uriPattern, m => $"URI=\"{substitutedUri}\"");
             lines[i] = isUri ? test : substitutedUri;
         }

@@ -28,24 +28,25 @@ builder.Services.AddCors(options =>
         {
             if (allowedOrigins != null)
                 policyBuilder.WithOrigins(allowedOrigins)
-                             .AllowAnyHeader()
-                             .AllowAnyMethod();
+                           .AllowAnyHeader()
+                           .AllowAnyMethod()
+                           .AllowCredentials();
             else
                 policyBuilder.AllowAnyOrigin()
-                             .AllowAnyHeader()
-                             .AllowAnyMethod();
+                           .AllowAnyHeader()
+                           .AllowAnyMethod();
         });
 });
 
 var app = builder.Build();
 
+app.UseCors(myAllowSpecificOrigins);
 app.UseMiddleware<CacheControlMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ApiKeyMiddleware>();
 app.UseRouting();
-app.UseCors(myAllowSpecificOrigins);
 app.UseOutputCache();
-app.MapGet("/hello", async context => { await context.Response.WriteAsync("Hello, Bitches! v1.7"); });
+app.MapGet("/hello", async context => { await context.Response.WriteAsync("Hello, Bitches! v1.10"); });
 app.UseAuthentication();
 app.MapControllers();
 app.Run();

@@ -20,7 +20,9 @@ public class ApiKeyMiddleware
         "audio/x-mpegurl",
         "application/m3u8",
         "video/mp2t",           // For .ts files
-        "application/octet-stream"  // Some servers send this for ts files
+        "application/octet-stream",  // Some servers send this for ts files
+        "image/jpeg",           // For JPEG segments
+        "image/jpg"            // Alternative JPEG content type
     };
 
     private static readonly string[] ValidHlsExtensions =
@@ -31,7 +33,8 @@ public class ApiKeyMiddleware
         ".aac",   // Audio segments
         ".key",   // Encryption keys
         ".vtt",   // WebVTT subtitles
-        ".srt"    // SubRip subtitles
+        ".srt",   // SubRip subtitles
+        ".jpg"    // JPEG segments (some providers use this)
     };
 
     public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration, IHttpClientFactory httpClientFactory)
@@ -43,6 +46,13 @@ public class ApiKeyMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Skip API key validation for OPTIONS requests
+        if (context.Request.Method == "OPTIONS")
+        {
+            await _next(context);
+            return;
+        }
+
         // Skip API key validation if no API key is configured
         if (string.IsNullOrEmpty(_apiKey))
         {
@@ -50,117 +60,16 @@ public class ApiKeyMiddleware
             return;
         }
 
-        // Handle both /proxy/ and /proxy/m3u8/ routes
-        if (context.Request.Path.StartsWithSegments("/proxy") || context.Request.Path.StartsWithSegments("/proxy/m3u8"))
+        // Skip API key validation for proxy endpoints
+        if (context.Request.Path.StartsWithSegments("/proxy") || 
+            context.Request.Path.StartsWithSegments("/proxy/m3u8") ||
+            context.Request.Path.StartsWithSegments("/video"))
         {
-            var pathValue = context.Request.Path.Value!;
-            var urlPath = pathValue.StartsWith("/proxy/m3u8/") 
-                ? pathValue.Substring("/proxy/m3u8/".Length)
-                : pathValue.Substring("/proxy/".Length);
-            
-            if (string.IsNullOrEmpty(urlPath))
-            {
-                context.Response.StatusCode = 400;
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    message = "Invalid request",
-                    details = "URL must be provided in the path"
-                });
-                return;
-            }
-
-            // Split URL and parameters
-            var parts = urlPath.Split(new[] { '/' }, 2);
-            var encodedUrl = parts[0];
-            var paramsJson = parts.Length > 1 ? parts[1] : null;
-
-            // Try decoding twice in case of double-encoding
-            var url = HttpUtility.UrlDecode(encodedUrl);
-            if (url.Contains("%"))
-            {
-                url = HttpUtility.UrlDecode(url);
-            }
-
-            // Parse parameters if they exist
-            if (!string.IsNullOrEmpty(paramsJson))
-            {
-                try
-                {
-                    var decodedParams = HttpUtility.UrlDecode(paramsJson);
-                    var parameters = JsonSerializer.Deserialize<Dictionary<string, string>>(decodedParams);
-                    
-                    context.Items["ProxyParameters"] = parameters;
-                }
-                catch
-                {
-                    // If JSON parsing fails, ignore the parameters
-                }
-            }
-
-            // Check if it's a valid URL
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                context.Response.StatusCode = 400;
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    message = "Invalid request",
-                    details = "Invalid URL format",
-                    url = url
-                });
-                return;
-            }
-
-            // Store the original URL in HttpContext.Items
-            context.Items["OriginalUrl"] = url;
-
-            // Check if URL has a valid HLS extension
-            if (ValidHlsExtensions.Any(ext => uri.AbsolutePath.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
-            {
-                await _next(context);
-                return;
-            }
-
-            // If no valid extension, check content type
-            try
-            {
-                using var client = _httpClientFactory.CreateClient();
-                using var request = new HttpRequestMessage(HttpMethod.Head, url);
-                
-                if (context.Items["ProxyParameters"] is Dictionary<string, string> parameters &&
-                    parameters.TryGetValue("referer", out var referer))
-                {
-                    request.Headers.Referrer = new Uri($"https://{referer}");
-                }
-
-                var response = await client.SendAsync(request);
-                
-                var contentType = response.Content.Headers.ContentType?.MediaType;
-                if (contentType == null || !ValidHlsContentTypes.Contains(contentType.ToLower()))
-                {
-                    context.Response.StatusCode = 400;
-                    await context.Response.WriteAsJsonAsync(new
-                    {
-                        message = "Invalid request",
-                        details = "URL must point to an HLS stream or segment"
-                    });
-                    return;
-                }
-            }
-            catch
-            {
-                context.Response.StatusCode = 400;
-                await context.Response.WriteAsJsonAsync(new
-                {
-                    message = "Invalid request",
-                    details = "Unable to verify URL content type"
-                });
-                return;
-            }
-
             await _next(context);
             return;
         }
 
+        // Rest of the middleware remains unchanged
         if (context.Request.Headers.TryGetValue(API_KEY_HEADER_NAME, out var headerApiKey) && 
             _apiKey.Equals(headerApiKey))
         {
