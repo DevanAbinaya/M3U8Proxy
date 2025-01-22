@@ -40,11 +40,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseRouting();
 app.UseCors(myAllowSpecificOrigins);
 app.UseMiddleware<CacheControlMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ApiKeyMiddleware>();
-app.UseRouting();
 app.UseOutputCache();
 app.MapGet("/hello", async context => { await context.Response.WriteAsync("Hello, Bitches! v1.10"); });
 app.UseAuthentication();
