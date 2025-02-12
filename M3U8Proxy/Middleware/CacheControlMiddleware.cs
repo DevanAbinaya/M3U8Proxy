@@ -51,7 +51,7 @@ public class CacheControlMiddleware
                 if (context.Response.StatusCode >= 200 && context.Response.StatusCode < 300)
                 {
                     context.Response.Headers.Remove("Cache-Control");
-                    context.Response.Headers.CacheControl = "public, max-age=15768000";
+                    context.Response.Headers.CacheControl = "public, max-age=86400";
                 }
             }
             return Task.CompletedTask;

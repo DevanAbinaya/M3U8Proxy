@@ -46,7 +46,7 @@ app.UseMiddleware<CacheControlMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ApiKeyMiddleware>();
 app.UseOutputCache();
-app.MapGet("/hello", async context => { await context.Response.WriteAsync("Hello, Bitches! v1.10"); });
+app.MapGet("/hello", async context => { await context.Response.WriteAsync("Hello, Bitches! v2"); });
 app.UseAuthentication();
 app.MapControllers();
 app.Run();
