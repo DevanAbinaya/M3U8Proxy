@@ -20,9 +20,9 @@ public class CorsMiddleware
             context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
             context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
             context.Response.Headers.Add("Access-Control-Allow-Headers", 
-                "Origin, Range, Accept-Encoding, Referer, Cache-Control, X-Requested-With, Content-Type");
+                "Origin, Range, Accept-Encoding, Referer, Cache-Control, X-Requested-With, Content-Type, Accept");
             context.Response.Headers.Add("Access-Control-Expose-Headers", 
-                "Server, Content-Length, Content-Range, Date");
+                "Server, Content-Length, Content-Range, Date, Content-Type");
             context.Response.Headers.Add("Access-Control-Max-Age", "86400"); // 24 hours
 
             // Return 204 for OPTIONS requests
@@ -32,4 +32,4 @@ public class CorsMiddleware
 
         await _next(context);
     }
-} 
+}

@@ -55,6 +55,19 @@ public partial class Proxy : Controller
                     AfterReceive.AddForcedHeaders(forcedHeadersProxyDictionary, hrm);
                     hrm.Headers.Remove("Cross-Origin-Resource-Policy");
                     hrm.Headers.Add("Cross-Origin-Resource-Policy", "*");
+                    
+                    // Handle subtitle files
+                    if (SubtitleHandler.IsSubtitleFile(url))
+                    {
+                        SubtitleHandler.SetSubtitleContentType(hrm, url);
+                        // Ensure proper caching for subtitle files
+                        hrm.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
+                        {
+                            Public = true,
+                            MaxAge = TimeSpan.FromHours(24)
+                        };
+                    }
+                    
                     return Task.CompletedTask;
                 })
                 .Build();
